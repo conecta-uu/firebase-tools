@@ -73,7 +73,6 @@ async function awaitTlsReady(url: string): Promise<void> {
 export async function doSetup(
   projectId: string,
   webAppName: string | null,
-  location: string | null,
   serviceAccount: string | null,
 ): Promise<void> {
   await Promise.all([
@@ -89,17 +88,10 @@ export async function doSetup(
   // possible to reduce the likelihood that the subsequent Cloud Build fails. See b/336862200.
   await ensureAppHostingComputeServiceAccount(projectId, serviceAccount);
 
-  const allowedLocations = (await apphosting.listLocations(projectId)).map((loc) => loc.locationId);
-  if (location) {
-    if (!allowedLocations.includes(location)) {
-      throw new FirebaseError(
-        `Invalid location ${location}. Valid choices are ${allowedLocations.join(", ")}`,
-      );
-    }
-  }
-
-  location =
-    location || (await promptLocation(projectId, "Select a location to host your backend:\n"));
+  const location = await promptLocation(
+    projectId,
+    "Select a primary region to host your backend:\n",
+  );
 
   const gitRepositoryLink: GitRepositoryLink = await githubConnections.linkGitHubRepository(
     projectId,
