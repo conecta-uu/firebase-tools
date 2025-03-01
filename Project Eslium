@@ -1,0 +1,106 @@
+// App.js (React Native com Expo)
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TextInput, Button, Alert } from 'react-native';
+import firebase from 'firebase/app';
+import 'firebase/auth';
+import 'firebase/firestore';
+
+// Substitua pelos dados do seu Firebase
+const firebaseConfig = {
+  apiKey: "SUA_API_KEY",
+  authDomain: "SEU_AUTH_DOMAIN",
+  projectId: "SEU_PROJECT_ID",
+  storageBucket: "SEU_STORAGE_BUCKET",
+  messagingSenderId: "SEU_SENDER_ID",
+  appId: "SEU_APP_ID",
+};
+
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+
+const db = firebase.firestore();
+
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [input, setInput] = useState('');
+  const [blueprint, setBlueprint] = useState('');
+
+  useEffect(() => {
+    const unsubscribe = firebase.auth().onAuthStateChanged(setUser);
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogin = () => {
+    // Login anônimo para facilitar o acesso
+    firebase.auth().signInAnonymously()
+      .catch(error => Alert.alert("Erro no login", error.message));
+  };
+
+  const handleSubmit = async () => {
+    if (!input.trim()) {
+      Alert.alert("Por favor, insira algo!");
+      return;
+    }
+    try {
+      // Envia o input para a coleção "inputs" no Firestore
+      await db.collection('inputs').add({
+        text: input,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      setInput('');
+      Alert.alert('Input enviado!', 'Aguarde enquanto processamos seu blueprint.');
+    } catch (error) {
+      Alert.alert("Erro", error.message);
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      {user ? (
+        <>
+          <Text style={styles.header}>Project Elysium</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Descreva seu dia ou sentimentos..."
+            value={input}
+            onChangeText={setInput}
+          />
+          <Button title="Enviar" onPress={handleSubmit} />
+          {blueprint ? (
+            <Text style={styles.blueprint}>Seu blueprint: {blueprint}</Text>
+          ) : null}
+        </>
+      ) : (
+        <Button title="Entrar" onPress={handleLogin} />
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1, 
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16
+  },
+  header: {
+    fontSize: 24,
+    marginBottom: 20
+  },
+  input: {
+    width: '100%',
+    borderColor: '#ccc',
+    borderWidth: 1,
+    padding: 8,
+    marginBottom: 12,
+    borderRadius: 4
+  },
+  blueprint: {
+    marginTop: 20,
+    fontSize: 18,
+    color: '#333'
+  }
+});
